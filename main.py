@@ -1,0 +1,81 @@
+from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException as StarletteHTTPExcep
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+
+app = FastAPI()
+
+temp_ = Jinja2Templates(directory='templates')
+
+app.mount('/static',StaticFiles(directory='static'),name='static')
+
+posts:list[dict] = [
+    {
+        "id":1, 
+        "author":"J1",
+        "title":"T1",
+        "content":"C1"
+     },
+    {
+        "id":2,
+        "author":"J2",
+        "title":"T2",
+        "content":"C2"
+    }
+]
+
+@app.get('/')
+def home():
+    return {"message":"Hello!"}
+
+@app.get('api/posts')
+def get_posts():
+    return posts
+
+
+@app.get('/api/posts/{post_id}')
+def get_post(post_id:int):
+    for post in posts:
+        if post.get("id") == post_id:
+            return post
+    return HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail='Post not found!')
+
+#Validation Error Handler:
+@app.exception_handler(RequestValidationError)
+def validation_excep_handler(request:Request, exception:RequestValidationError):
+    # if request.url.path.startswith('/api'):
+    #     return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,content={"detail":exception.errors()})
+    return temp_.TemplateResponse(
+        request,
+        "vError.html",
+        {
+            "status_code":status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "title":status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "message":"Invalid request, check input :("
+        },
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
+    )
+
+#404 error handler:
+'''
+The following route sends 404.html whenevee a non-existent api route is accessed.
+THE FACT WHETHER THE ROUTE IS NON-EXISTENT IS DETECTED BY THE 'STARLETTE' WE IMPORTED.
+IF THE NON-EXISTENT ROUTE STARTS WITH '/api', A RAW JSON RESPONSE IS GIVEN TO THE CLIENT,
+IF THE NON-EXISTENT ROUTE STARTS WITHOUT '/api', A 404.HTML IS RECIEVED BY THE CLIENT
+'''
+@app.exception_handler(StarletteHTTPExcep)
+def general_http_excep_handler(request:Request, exception:StarletteHTTPExcep):
+    message=(exception.detail if exception.detail else "An error occured. Check ur request!")
+    if request.url.path.startswith('/api'):
+        return JSONResponse(
+            status_code = exception.status_code,
+            content={"detail":message}
+        )
+    
+    return temp_.TemplateResponse(request, '404.html',{
+        "status_code":exception.status_code,
+        "title":exception.status_code,
+        "message":message
+    },status_code=exception.status_code)

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>422 - Validation Error</title>
+    <style>
+        /* --- CSS Variables --- */
+        :root {
+            --bg-color: #0f172a;      /* Dark slate */
+            --bg-code: #020617;       /* Deeper slate for code blocks */
+            --text-main: #f8fafc;     /* Off-white */
+            --text-muted: #94a3b8;    /* Cool gray */
+            --accent-error: #f43f5e;  /* Rose/Crimson for validation state */
+            --border-color: #1e293b;
+            
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            
+            --space-sm: 1rem;
+            --space-md: 2rem;
+            --radius: 0.5rem;
+        }
+
+        /* --- Reset --- */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            padding: var(--space-md);
+        }
+
+        /* --- Layout & Typography --- */
+        .error-container {
+            text-align: center;
+            max-width: 650px;
+            width: 100%;
+            animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        .error-code {
+            font-size: clamp(5rem, 12vw, 10rem);
+            font-weight: 900;
+            line-height: 1;
+            color: transparent;
+            -webkit-text-stroke: 2px rgba(244, 63, 94, 0.15); /* Tinted stroke to match accent */
+            margin-bottom: calc(var(--space-sm) * -1);
+            user-select: none;
+        }
+
+        .error-title {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: var(--space-sm);
+            position: relative;
+            z-index: 10;
+        }
+
+        .error-message {
+            color: var(--text-muted);
+            font-size: 1.125rem;
+            margin-bottom: var(--space-md);
+            text-wrap: balance;
+        }
+
+        /* --- The Data/Validation Details Block --- */
+        .error-details {
+            background-color: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--space-sm) var(--space-md);
+            margin-bottom: var(--space-md);
+            text-align: left;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .error-details::before {
+            content: "Validation Details";
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .error-details code {
+            font-family: var(--font-mono);
+            color: var(--accent-error);
+            font-size: 0.875rem;
+        }
+
+        /* --- Interactive Elements --- */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background-color: transparent;
+            color: var(--accent-error);
+            border-color: var(--accent-error);
+        }
+
+        .btn-primary:hover, 
+        .btn-primary:focus-visible {
+            background-color: var(--accent-error);
+            color: var(--text-main);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
+        }
+
+        .btn-secondary {
+            color: var(--text-muted);
+            border-color: var(--border-color);
+        }
+
+        .btn-secondary:hover,
+        .btn-secondary:focus-visible {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .error-container { animation: none; opacity: 1; }
+            .btn { transform: none !important; }
+        }
+
+        /* --- Keyframes --- */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="error-container">
+        <div class="error-code" aria-hidden="true">422</div>
+        <h1 class="error-title">Invalid Request</h1>
+        
+        <p class="error-message">We couldn't process your request. The data provided doesn't match the expected format.</p>
+        
+        <div class="error-details">
+            <code>Input should be a valid integer, unable to parse string as an integer. (path -> id)</code>
+        </div>
+
+        <div class="btn-group">
+            <button onclick="history.back()" class="btn btn-secondary">Go Back</button>
+            <a href="/" class="btn btn-primary">Return Home</a>
+        </div>
+    </main>
+
+</body>
+</html>
