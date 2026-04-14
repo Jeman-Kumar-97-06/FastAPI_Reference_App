@@ -52,6 +52,7 @@ def home():
     return {"message":"Hello!"}
 
 #USERS API ROUTES:
+#POST : /api/users : Create User: 
 @app.post('/api/users',response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user:UserCreate, db: Annotated[Session, Depends(get_db)]):
     result = db.execute(select(models.User).where(models.User.username==user.username))
@@ -73,6 +74,56 @@ def create_user(user:UserCreate, db: Annotated[Session, Depends(get_db)]):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+#GET : /api/users/{user_id} : Get a User/ Login : 
+@app.get('/api/user/{user_id}',response_model=UserResponse)
+def get_user(user_id:int, db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.User).where(models.User.id == user_id))
+    user   = result.scalars().first()
+    if user:
+        return user
+    
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+
+#GET : /api/users/{user_id}/posts : Get a specific user's posts:
+@app.get('/api/users/{user_id}/posts',response_model=list[PostResponse])
+def get_user_posts(user_id:int, db:Annotated[Session, Depends(get_db)]):
+    results = db.execute(select(models.User).where(models.User.id==user_id))
+    user    = results.scalars().first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    results = db.exeute(select(models.Post).where(models.Post.user_id==user_id))
+    posts   = results.scalars().all()
+    return posts
+
+#GET : /api/posts : Get all posts:
+@app.get('/api/posts',resopnse_model = list[PostResponse])
+def get_posts(db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.Post))
+    posts  = result.scalars().all()
+    return posts
+
+#GET : /api/posts/{p_id} : Get a post by it's id:
+@app.get('/api/posts/{p_id}',response_model = PostResponse)
+def get_post(p_id:int, db:Annotated[Session, Depends(get_db)]):
+    res = db.execute(select(models.Post).where(models.Post.id==p_id))
+    post = res.scalars().first()
+    if post:
+        return post
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Post not found")
+
+#POST : /api/posts : create a new post : 
+@app.post('/api/posts',respose_model = PostResponse, status_code=status.HTTP_201_CREATED)
+def create_post(post:PostCreate, db:Annotated[Session, Depends(get_db)]):
+    res = db.execute(select(models.User).where(models.User.id==post.user_id))
+    user= res.scalars().first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail='User not found')
+    new_p = models.Post(title=post.title, content=post.content, user_id=post.user_id)
+    db.add(new_p)
+    db.commit()
+    db.refresh(new_p)
+    return new_p
 
 #POSTS API ROUTES:
 #GET : /api/posts:
