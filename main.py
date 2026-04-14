@@ -18,7 +18,8 @@ from typing import Annotated
 from schemas import PostCreate, PostResponse
 
 '''
-Create tables according to the models, incase if they don't exist
+What the Following line does : 
+    Create tables according to the models, incase if they don't exist
 '''
 Base.metadata.create_all(bind=engine)
 
@@ -50,10 +51,36 @@ posts:list[dict] = [
 def home():
     return {"message":"Hello!"}
 
+#USERS API ROUTES:
+@app.post('/api/users',response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_user(user:UserCreate, db: Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.User).where(models.User.username==user.username))
+    existing_user = result.scalars().first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists"
+        )
+    result = db.execute(select(models.User).where(models.User.email==user.email))
+    existing_email = result.scalars().first()
+    if existing_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Email already registered")
+    new_user = models.User(
+        username = user.username,
+        email    = user.email
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+#POSTS API ROUTES:
+#GET : /api/posts:
 @app.get('/api/posts',response_model=list[PostResponse])
 def get_posts():
     return posts
 
+#POST : /api/posts:
 @app.post('/api/posts',response_model=PostResponse,status_code=status.HTTP_201_CREATED)
 def create_post(post:PostCreate):
     new_id = max(p['id'] for p in posts) + 1 if posts else 1
@@ -61,12 +88,14 @@ def create_post(post:PostCreate):
     posts.append(new_post)
     return new_post
 
+#GET : /api/posts/{post_id}:
 @app.get('/api/posts/{post_id}',response_model=PostResponse)
 def get_post(post_id:int):
     for p in posts:
         if p.get("id")==post_id:
             return p
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Post not found!")
+
 
 @app.get('/api/posts/{post_id}')
 def get_post(post_id:int):
