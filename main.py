@@ -1,17 +1,34 @@
-from fastapi import FastAPI, Request, HTTPException, status
+from fastapi import Depends,FastAPI, Request, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPExcep
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+import models
+
+from database import Base, engine, get_db
+from schemas import PostCreate, PostResponse, UserCreate, UserResponse
+
+from typing import Annotated
+
 from schemas import PostCreate, PostResponse
+
+'''
+Create tables according to the models, incase if they don't exist
+'''
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 temp_ = Jinja2Templates(directory='templates')
 
 app.mount('/static',StaticFiles(directory='static'),name='static')
+
+app.mount('/media',StaticFiles(cirectory='media'),name='media')
 
 posts:list[dict] = [
     {
@@ -28,6 +45,7 @@ posts:list[dict] = [
     }
 ]
 
+#Home Route:
 @app.get('/')
 def home():
     return {"message":"Hello!"}
