@@ -20,12 +20,12 @@ posts:list[dict] = [
 
 #API Routes : 
 #GET : get all posts: /api/posts
-@app.get("/api/posts")
+@app.get("/api/posts",response_model=list[PostResponse])
 def get_posts():
     return posts
 
 #GET : get a post by id : /api/posts/{post_id} : 
-@app.get('/api/posts/{post_id}')
+@app.get('/api/posts/{post_id}',response_model=PostResponse)
 def get_post(post_id:int):
     for post in posts:
         if post.get("id") == post_id:
@@ -33,6 +33,20 @@ def get_post(post_id:int):
         
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Post not found')
 
+#POST : create a new post: /api/posts : 
+@app.post('/api/posts',response_model=PostResponse, status_code=status.HTTP_201_CREATED)
+def create_post(post:PostCreate):
+    new_id = max(p["id"] for p in posts)+1 if posts else 1
+    new_post = {
+        "id" : new_id,
+        "author" : post.author,
+        "title" : post.title,
+        "content" : post.content,
+        "date_posted" : "April 20, 2025"
+    }
+
+    posts.append(new_post)
+    return new_post
 
 #404 and Validation Error handlers: 
 @app.exception_handler(RequestValidationError)
