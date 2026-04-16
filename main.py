@@ -16,8 +16,11 @@ import models
 from database import Base, engine, get_db
 from schemas import PostCreate, PostResponse, UserCreate, UserResponse
 
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
 app.mount('/static',StaticFiles(directory='static'))
+app.mount('/media',StaticFiles(directory='media'),name='media')
 
 temp_ = Jinja2Templates(directory='templates')
 
