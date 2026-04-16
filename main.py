@@ -1,11 +1,20 @@
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, status, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPExcep
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from schemas import PostCreate, PostResponse
+
+from typing import Annotated
+
+import models
+from database import Base, engine, get_db
+from schemas import PostCreate, PostResponse, UserCreate, UserResponse
 
 app = FastAPI()
 app.mount('/static',StaticFiles(directory='static'))
@@ -16,7 +25,7 @@ posts:list[dict] = [
     {"id":1, "author":"J1", "title":"post1", "content":"C1"},
     {"id":2, "author":"J2", "title":"post2", "content":"C2"},
     {"id":3, "author":"J3", "title":"post3", "content":"C3"}
-]
+] 
 
 #API Routes : 
 #GET : get all posts: /api/posts

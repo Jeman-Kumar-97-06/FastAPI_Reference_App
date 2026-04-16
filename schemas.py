@@ -30,4 +30,5 @@ class PostCreate(PostBase):
 class PostResponse(PostBase):
     model_config = ConfigDict(from_attributes=True)
     id:int
-    date_posted:str
+    date_posted:datetime
+    author:UserResponse
