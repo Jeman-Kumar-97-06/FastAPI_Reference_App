@@ -17,7 +17,12 @@ class UserResponse(UserBase):
 class PostBase(BaseModel):
     title : str = Field(min_length=1, max_length=100)
     content : str = Field(min_length=1)
-    author : str = Field(min_length=1, max_length=50)
+    #author : str = Field(min_length=1, max_length=50)
+    '''
+    We remove the 'author' cuz this is automarically filled by the help of db model using the
+    relationship. We don't want user to send an author id. I mean what if the guy is a bitch and sends
+    a fucked up 'author'. So, we take the responsibility of filling it with the user who is currently logged in.
+    '''
 
 class PostCreate(PostBase):
     pass
