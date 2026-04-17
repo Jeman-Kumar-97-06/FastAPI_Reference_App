@@ -105,7 +105,6 @@ def update_user(user_id:int, user_update:UserUpdate, db:Annotated[Session, Depen
     db.refresh(user)
     return user
     
-
 #DELETE: Delete a User (and his posts automatically) :
 @app.delete('/api/users/{user_id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id:int, db:Annotated[Session, Depends(get_db)]):
