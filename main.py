@@ -9,7 +9,9 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPExcep
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+#from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from schemas import PostCreate, PostResponse, PostUpdate
 
@@ -19,19 +21,21 @@ import models
 from database import Base, engine, get_db
 from schemas import PostCreate, PostResponse, UserCreate, UserResponse, UserUpdate
 
-Base.metadata.create_all(bind=engine)
+#Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(_app:FastAPI):
+    #Startup:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    #ShutDown:
+    await engine.dispose()
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 app.mount('/static',StaticFiles(directory='static'))
 app.mount('/media',StaticFiles(directory='media'),name='media')
 
 temp_ = Jinja2Templates(directory='templates')
-
-posts:list[dict] = [
-    {"id":1, "author":"J1", "title":"post1", "content":"C1"},
-    {"id":2, "author":"J2", "title":"post2", "content":"C2"},
-    {"id":3, "author":"J3", "title":"post3", "content":"C3"}
-] 
 
 #API Routes : 
 # user ROUTES:
@@ -70,43 +74,63 @@ def get_user(user_id:int, db:Annotated[Session, Depends(get_db)]):
 
 #GET : posts by user_id: /api/users/{user_id}/posts:
 @app.get('/api/users/{user_id}/posts',response_model=list[PostResponse])
-def get_user_posts(user_id:int, db:Annotated[Session, Depends(get_db)]):
-    results = db.execute(select(models.User).where(models.User.id == user_id))
-    user = results.scalars().first()
+# def get_user_posts(user_id:int, db:Annotated[Session, Depends(get_db)]):
+#     results = db.execute(select(models.User).where(models.User.id == user_id))
+#     user = results.scalars().first()
+#     if not user:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+#     results = db.execute(select(models.Post).where(models.Post.user_id==user_id))
+#     posts = results.scalars().all()
+#     return posts
+async def get_user_posts(user_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
+    res = await db.execute(select(models.User).where(models.User.id==user_id))
+    user = res.scalars().first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
-    results = db.execute(select(models.Post).where(models.Post.user_id==user_id))
-    posts = results.scalars().all()
+    res = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(models.Post.user_id==user_id))
+    posts = res.scalars().all()
     return posts
-
+ 
 #PATCH : Update User details : /api/users/{user_id} :
 @app.patch('/api/users/{user_id}',response_model=UserResponse)
-def update_user(user_id:int, user_update:UserUpdate, db:Annotated[Session, Depends(get_db)]):
-    res = db.execute(select(models.User).where(models.User.id==user_id))
-    user= res.scalars().first()
+# def update_user(user_id:int, user_update:UserUpdate, db:Annotated[Session, Depends(get_db)]):
+#     res = db.execute(select(models.User).where(models.User.id==user_id))
+#     user= res.scalars().first()
+#     if not user:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+#     if user_update.username is not None and user_update.username != user.username:
+#         res = db.execute(select(models.User).where(models.User.username==user_update.username))
+#         existing_user = res.scalars().first()
+#         if existing_user:
+#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Username already exists')
+#     if user_update.email is not None and user_update.email != user.email:
+#         res=db.execute(select(models.User).where(models.User.email==user_update.email))
+#         existing_email = res.scalars().first()
+#         if existing_email:
+#             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        
+#     if user_update.username is not None:
+#         user.username = user_update.username
+#     if user_update.email is not None:
+#         user.email = user_update.email
+#     if user_update.image_file is not None:
+#         user.image_file = user_update.image_file
+
+#     db.commit()
+#     db.refresh(user)
+#     return user
+async def update_user(user_id:int, user_update: UserUpdate, db: Annotated[AsyncSession, Depends(get_db)]):
+    res = await db.execute(select(models.User).where(models.User.id==user_id))
+    user = res.scalars().first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail="User not found")
     if user_update.username is not None and user_update.username != user.username:
-        res = db.execute(select(models.User).where(models.User.username==user_update.username))
+        res=await db.execute(select(models.User).where(models.User.username==user_update.username))
         existing_user = res.scalars().first()
         if existing_user:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Username already exists')
-    if user_update.email is not None and user_update.email != user.email:
-        res=db.execute(select(models.User).where(models.User.email==user_update.email))
-        existing_email = res.scalars().first()
-        if existing_email:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-        
-    if user_update.username is not None:
-        user.username = user_update.username
-    if user_update.email is not None:
-        user.email = user_update.email
-    if user_update.image_file is not None:
-        user.image_file = user_update.image_file
-
-    db.commit()
-    db.refresh(user)
-    return user
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Username already exists!")
+       
+    
     
 #DELETE: Delete a User (and his posts automatically) :
 @app.delete('/api/users/{user_id}',status_code=status.HTTP_204_NO_CONTENT)
@@ -121,19 +145,29 @@ def delete_user(user_id:int, db:Annotated[Session, Depends(get_db)]):
 # post ROUTES:
 #GET : get all posts: /api/posts
 @app.get("/api/posts",response_model=list[PostResponse])
-def get_posts(db:Annotated[Session, Depends(get_db)]):
-    result = db.execute(select(models.Post))
-    posts = result.scalars().all()
+# def get_posts(db:Annotated[Session, Depends(get_db)]):
+#     result = db.execute(select(models.Post))
+#     posts = result.scalars().all()
+#     return posts
+async def home(request:Request, db:Annotated[AsyncSession, Depends(get_db)]):
+    res = await db.execute(select(models.Post).options(selectinload(models.Post.author)))
+    posts = res.scalars().all()
     return posts
 
 #GET : get a post by id : /api/posts/{post_id} : 
 @app.get('/api/posts/{post_id}',response_model=PostResponse)
-def get_post(post_id:int, db:Annotated[Session, Depends(get_db)]):
-    res = db.execute(select(models.Post).where(models.Post.id == post_id))
+# def get_post(post_id:int, db:Annotated[Session, Depends(get_db)]):
+#     res = db.execute(select(models.Post).where(models.Post.id == post_id))
+#     post = res.scalars().first()
+#     if post:
+#         return post
+#     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found!")
+async def get_post(post_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
+    res = await db.execute(select(models.Post).options(selectinload(models.Post.author)).where(models.Post.id==post_id))
     post = res.scalars().first()
     if post:
         return post
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found!")
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Post not found!')
 
 #POST : create a new post: /api/posts : 
 @app.post('/api/posts',response_model=PostResponse, status_code=status.HTTP_201_CREATED)
