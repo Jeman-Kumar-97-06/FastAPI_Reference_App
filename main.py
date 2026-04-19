@@ -22,11 +22,18 @@ from database import Base, engine, get_db
 from schemas import PostCreate, PostResponse, UserCreate, UserResponse, UserUpdate
 
 #Base.metadata.create_all(bind=engine)
+'''
+The @asynccontextmanager is used to define the lifespan for the FastAPI application.
+it manages the setup and teardown processes : Specifically for DBs.
+App Startup : shit that comes before 'yield'.
+'Yield' : Passes control to main untill all the shit is done.
+App Shutdown : When the app is shutdown 'engine.dispose()' is executed.
+'''
 @asynccontextmanager
 async def lifespan(_app:FastAPI):
     #Startup:
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)#Connects to db or creates one if there's none
     yield
     #ShutDown:
     await engine.dispose()

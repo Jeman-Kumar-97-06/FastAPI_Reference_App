@@ -12,6 +12,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     image_file:Mapped[str|None] = mapped_column(String(200),nullable=True, default=None)
     posts: Mapped[list[Post]] = relationship(back_populates="author", cascade="all, delete-orphan")
+    #posts are populated based on the 'author' field in Post
     @property
     def image_path(self) -> str:
         if self.image_file:
@@ -26,4 +27,5 @@ class Post(Base):
     user_id :Mapped[int] = mapped_column(ForeignKey('users.id'), nullable=False, index=True)
     date_posted: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda:datetime.now(UTC))
     author: Mapped[User] = relationship(back_populates="posts")
+    #author is populated based on the 'posts' field in User
     
