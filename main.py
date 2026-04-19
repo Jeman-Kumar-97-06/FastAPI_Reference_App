@@ -41,36 +41,60 @@ temp_ = Jinja2Templates(directory='templates')
 # user ROUTES:
 # POST : create user : /api/users : 
 @app.post('/api/users', response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(user:UserCreate, db:Annotated[Session, Depends(get_db)]):
-    result = db.execute(select(models.User).where(models.User.username == user.username))
-    existing_user = result.scalars().first()
-    if existing_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
-    result = db.execute(select(models.User).where(models.User.email==user.email))
-    existing_email = result.scalars().first()
-    if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    new_user = models.User(
-        username=user.username,
-        email   =user.email
-    )
+# def create_user(user:UserCreate, db:Annotated[Session, Depends(get_db)]):
+#     result = db.execute(select(models.User).where(models.User.username == user.username))
+#     existing_user = result.scalars().first()
+#     if existing_user:
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists")
+#     result = db.execute(select(models.User).where(models.User.email==user.email))
+#     existing_email = result.scalars().first()
+#     if existing_email:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="Email already registered"
+#         )
+#     new_user = models.User(
+#         username=user.username,
+#         email   =user.email
+#     )
 
+#     db.add(new_user)
+#     db.commit()
+#     db.refresh(new_user)
+#     return new_user
+async def create_user(user:UserCreate, db:Annotated[AsyncSession, Depends(get_db)]):
+    res = await db.execute(select(models.User).where(models.User.username == user.username))
+    existing_user = res.scalars().first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Username already exists')
+    res = await db.execute(select(models.User).where(models.User.email==user.email))
+    existing_email = res.scalars().first()
+    if existing_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+    new_user = models.User(
+        username = user.username,
+        email = user.email
+    )
     db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    await db.commit()
+    await db.refresh(new_user)
     return new_user
+
 
 #GET : user data/ login : /api/users/{user_id} : 
 @app.get('/api/users/{user_id}', response_model=UserResponse)
-def get_user(user_id:int, db:Annotated[Session, Depends(get_db)]):
-    result = db.execute(select(models.User).where(models.User.id == user_id))
-    user = result.scalars().first()
+# def get_user(user_id:int, db:Annotated[Session, Depends(get_db)]):
+#     result = db.execute(select(models.User).where(models.User.id == user_id))
+#     user = result.scalars().first()
+#     if user:
+#         return user
+#     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+async def get_use(user_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
+    res = await db.execute(select(models.User).where(models.User.id==user_id))
+    user = res.scalars().first()
     if user:
         return user
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
 #GET : posts by user_id: /api/users/{user_id}/posts:
 @app.get('/api/users/{user_id}/posts',response_model=list[PostResponse])
@@ -300,14 +324,20 @@ async def delete_post(post_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
 
 #404 and Validation Error handlers: 
 @app.exception_handler(RequestValidationError)
-def validation_excep_handler(request:Request, exception: RequestValidationError):
+# def validation_excep_handler(request:Request, exception: RequestValidationError):
+#     return temp_.TemplateResponse(request, "vError.html",{
+#         "status_code":status.HTTP_422_UNPROCESSABLE_CONTENT,
+#         "title":status.HTTP_422_UNPROCESSABLE_CONTENT,
+#         "message":"Invalid Request, Please check input"
+#     },
+#     status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+#     )
+async def validation_excep_handler(request:Request, exception: RequestValidationError):
     return temp_.TemplateResponse(request, "vError.html",{
         "status_code":status.HTTP_422_UNPROCESSABLE_CONTENT,
         "title":status.HTTP_422_UNPROCESSABLE_CONTENT,
-        "message":"Invalid Request, Please check input"
-    },
-    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
-    )
+        "message":"Invalid Request. Please check your input and try again!"
+    },status_code=status.HTTP_422_UNPROCESSABLE_CONTENT)
 
 @app.exception_handler(StarletteHTTPExcep)
 def general_http_excep_handler(request:Request, exception: StarletteHTTPExcep):
