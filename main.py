@@ -21,6 +21,8 @@ import models
 from database import Base, engine, get_db
 from schemas import PostCreate, PostResponse, UserCreate, UserResponse, UserUpdate
 
+from routers import posts, users
+
 #Base.metadata.create_all(bind=engine)
 '''
 The @asynccontextmanager is used to define the lifespan for the FastAPI application.
@@ -43,6 +45,9 @@ app.mount('/static',StaticFiles(directory='static'))
 app.mount('/media',StaticFiles(directory='media'),name='media')
 
 temp_ = Jinja2Templates(directory='templates')
+
+app.include_router(users.router, prefix='/api/users', tags=["users"])
+app.include_router(posts.router, prefix='/api/posts', tags=["posts"])
 
 #API Routes : 
 # user ROUTES:
@@ -265,7 +270,7 @@ async def create_post(post:PostCreate, db:Annotated[AsyncSession, Depends(get_db
 #     db.commit()
 #     db.refresh(post)
 #     return post
-async def update_post_full(post_id:int, post_data:PostCreate, db:Annorated[AsyncSession, Depends(get_db)]):
+async def update_post_full(post_id:int, post_data:PostCreate, db:Annotated[AsyncSession, Depends(get_db)]):
     res = await db.execute(select(models.Post).where(models.Post.id==post_id))
     post= res.scalars().first()
     if not post:
