@@ -39,11 +39,11 @@ def create_post(post:PostCreate):
     posts.append(new_post)
     return new_post
 
-@app.get('/api/posts/{post_id}')
+@app.get('/api/posts/{post_id}',response_model=PostResponse)
 def get_post(post_id:int):
-    for post in posts:
-        if post.get('id') == post_id:
-            return post
+    for p in posts:
+        if p.get("id") == post_id:
+            return p
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Post not found')
 
 
