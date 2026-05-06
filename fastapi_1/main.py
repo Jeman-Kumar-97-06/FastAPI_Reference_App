@@ -4,6 +4,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StHTTPExcep
 
+from schemas import PostCreate, PostResponse
+
 #intialize "fastapi" app:
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='static'), name='static')
@@ -20,9 +22,22 @@ def home():
     return {"message":"Hello!"}
 
 
-@app.get('/api/posts')
+@app.get('/api/posts',response_model = list[PostResponse])
 def get_posts():
     return posts
+
+@app.post('/api/posts', response_model= PostResponse, status_code = status.HTTP_201_CREATED)
+def create_post(post:PostCreate):
+    new_id = max(p['id'] for p in posts) + 1 if posts else 1
+    new_post = {
+        "id":new_id,
+        "author":post.author,
+        "title":post.title,
+        "content":post.content,
+        "date_posted":"April 30, 2025"
+    }
+    posts.append(new_post)
+    return new_post
 
 @app.get('/api/posts/{post_id}')
 def get_post(post_id:int):
