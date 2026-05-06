@@ -41,3 +41,11 @@ def general_http_excep_handler(request:Request, exception: StHTTPExcep):
         status_code = exception.status_code,
         content={'detail':message}
     )
+
+@app.exception_handler(RequestValidationError)
+def validation_excep_handler(request:Request, exception:RequestValidationError):
+    return JSONResponse(
+        status_code=status.HTTP_402_UNPROCESSABLE_CONTENT,
+        content={'detail':exception.errors()}
+    )
+
