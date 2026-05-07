@@ -4,6 +4,7 @@ This file says : What format of 'Post' should i expect from client side and What
 '''
 
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from datetime import datetime
 
 class UserBase(BaseModel):
     username: str = Field(min_length=1, max_length=50)
@@ -21,14 +22,19 @@ class UserResponse(UserBase):
 class PostBase(BaseModel):
     title:str = Field(min_length=1, max_length=100)
     content:str = Field(min_length=1)
-    author:str = Field(min_length=1, max_length=50)
+    #We commented out 'author' cuz, this is automatically filled by the help of db models using the relationship
+    #author:str = Field(min_length=1, max_length=50)
 
 #Post create format
 class PostCreate(PostBase):
-    pass
+    #pass
+    user_id: int
 
 #What should client recieve when asking for a post:
 class PostResponse(PostBase):
     model_config = ConfigDict(from_attributes=True)
     id:int
-    date_posted:str
+    #date_posted:str
+    user_id:int
+    date_posted:datetime
+    author:UserResponse #Includes full user data object.

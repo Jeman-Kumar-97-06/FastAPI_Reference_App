@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, status, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -6,9 +6,21 @@ from starlette.exceptions import HTTPException as StHTTPExcep
 
 from schemas import PostCreate, PostResponse
 
+from typing import Annotated
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+import models
+from database import Base, engine, get_db
+from schemas import PostCreate, PostResponse, UserCreate, UserResponse
+
+Base.metadata.create_all(bind=engine)
+
 #intialize "fastapi" app:
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='static'), name='static')
+app.mount('/media', StaticFiles(directory='media'),name='media')
 
 posts : list[dict] = [
     {"id":1, "author": "jk", "title":"post1", "content":"C1"},
@@ -21,7 +33,18 @@ posts : list[dict] = [
 def home():
     return {"message":"Hello!"}
 
+#USER CONTROLLERS:
+@app.post('/api/users',response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_user(user:UserCreate, db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.User).where(models.User.username==user.username))
+    existing_user = result.scalars().first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists"
+        )
 
+#POST CONTROLLERS:
 @app.get('/api/posts',response_model = list[PostResponse])
 def get_posts():
     return posts
