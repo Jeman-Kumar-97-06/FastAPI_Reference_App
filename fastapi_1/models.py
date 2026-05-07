@@ -8,7 +8,7 @@ from database import Base
 #
 class User(Base):
     __tablename__='users' #table name in DB = 'users'
-    id:         Mapped[int]        = mapped_column(Integer, primary_key=True, index=True)
+    id:         Mapped[int]        = mapped_column(Integer, primary_key=True, index=True) #This matches with 'user_id' in 'posts'
     username:   Mapped[str]        = mapped_column(String(50), unique=True, nullable=False)
     email:      Mapped[str]        = mapped_column(String(120), unique=True, nullable=False)
     image_file: Mapped[str|None]   = mapped_column(String(200), nullable=True, default=None)
@@ -29,6 +29,10 @@ class Post(Base):
     id:          Mapped[int]         = mapped_column(Integer, primary_key=True, index=True)
     title:       Mapped[str]         = mapped_column(String(100), nullable=False)
     content:     Mapped[str]         = mapped_column(Text, nullable=False)
-    user_id:     Mapped[int]         = mapped_column(ForeignKey('users.id'), nullable=False, index=True)
+    user_id:     Mapped[int]         = mapped_column(ForeignKey('users.id'), nullable=False, index=True) #This matches with 'id' in 'users'
     date_posted: Mapped[datetime]    = mapped_column(DateTime(timezone=True),default=lambda:datetime.now(UTC))
     author:      Mapped[User]        = relationship(back_populates='posts')
+    '''
+    The moment you add new_post with author set to '8395', the user with id '8395' will add the post to it's 'posts' list.
+    The moment you append a 'post' to the 'posts' in the user, it automatically set the 'author' field in the post as current user.
+    '''
