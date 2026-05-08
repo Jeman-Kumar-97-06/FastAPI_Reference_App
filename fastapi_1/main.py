@@ -83,10 +83,14 @@ def get_user_posts(user_id:int, db:Annotated[Session, Depends(get_db)]):
     posts   = results.scalars().all()
     return posts
 
+
 #POST CONTROLLERS:
-@app.get('/api/posts',response_model = list[PostResponse])
-def get_posts():
+@app.get('/api/posts', response_model=list[PostResponse])
+def get_posts(db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.Post))
+    posts  = result.scalars().all()
     return posts
+
 
 @app.post('/api/posts', response_model= PostResponse, status_code = status.HTTP_201_CREATED)
 def create_post(post:PostCreate):
@@ -102,12 +106,15 @@ def create_post(post:PostCreate):
     return new_post
 
 @app.get('/api/posts/{post_id}',response_model=PostResponse)
-def get_post(post_id:int):
-    for p in posts:
-        if p.get("id") == post_id:
-            return p
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Post not found')
-
+def get_post(p_id:int, db:Annotated[Session, Depends(get_db)]):
+    res = db.execute(select(models.Post).where(models.Post.id==p_id))
+    post = res.scalars().first()
+    if post:
+        return post
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Post not found"
+    )
 
 @app.exception_handler(StHTTPExcep)
 def general_http_excep_handler(request:Request, exception: StHTTPExcep):
