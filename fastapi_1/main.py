@@ -1,135 +1,32 @@
-from fastapi import FastAPI, HTTPException, Request, status, Depends
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StHTTPExcep
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
-from schemas import PostCreate, PostResponse
-
-from typing import Annotated
-
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-import models
-from database import Base, engine, get_db
-from schemas import PostCreate, PostResponse, UserCreate, UserResponse
-
-Base.metadata.create_all(bind=engine)
-
-#intialize "fastapi" app:
 app = FastAPI()
-app.mount('/static', StaticFiles(directory='static'), name='static')
-app.mount('/media', StaticFiles(directory='media'),name='media')
+
+temps_ = Jinja2Templates(directory='templates')
 
 posts : list[dict] = [
-    {"id":1, "author": "jk", "title":"post1", "content":"C1"},
-    {"id":2, "author": "jk", "title":"post2", "content":"C2"},
-    {"id":3, "author":"jk2", "title":"post3", "content":"C3"}
+    {"id":1, "author":"jk", "title":"p1", "content":"Post 1 content"},
+    {"id":2, "author":"jn", "title":"p2", "content":"Post 2 content"}
 ]
 
-#'/api' route controller:
-@app.get("/api")
-def home():
-    return {"message":"Hello!"}
+# -----------------------------------------------------------------------------------------------
+# API ROUTES
 
-#USER CONTROLLERS:
-@app.post('/api/users',response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(user:UserCreate, db:Annotated[Session, Depends(get_db)]):
-    result = db.execute(select(models.User).where(models.User.username==user.username))
-    existing_user = result.scalars().first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists"
-        )
-    result = db.execute(select(models.User).where(models.User.email==user.email))
-    existing_email = result.scalars().first()
-    if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Email already registered'
-        )
-    new_user = models.User(
-        username = user.username,
-        email    = user.email
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
-
-@app.get('/api/users/{user_id}',response_model=UserResponse)
-def get_user(user_id:int, db:Annotated[Session, Depends(get_db)]):
-    result = db.execute(select(models.User).where(models.User.id==user_id))
-    user = result.scalars().first()
-    if user:
-        return user
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="User not found"
-    )
-
-@app.get("/api/users/{user_id}/posts",response_model=list[PostResponse])
-def get_user_posts(user_id:int, db:Annotated[Session, Depends(get_db)]):
-    results =db.execute(select(models.User).where(models.User.id==user_id))
-    user    = results.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    results = db.execute(select(models.Post).where(models.Post.user_id==user_id))
-    posts   = results.scalars().all()
+@app.get('/api/posts')
+def get_posts():
     return posts
 
+# -----------------------------------------------------------------------------------------------
+# JINJA ROUTES
 
-#POST CONTROLLERS:
-@app.get('/api/posts', response_model=list[PostResponse])
-def get_posts(db:Annotated[Session, Depends(get_db)]):
-    result = db.execute(select(models.Post))
-    posts  = result.scalars().all()
-    return posts
+@app.get('/')
+def home(request:Request):
+    return temps_.TemplateResponse(request, 'home.html')
 
-
-@app.post('/api/posts', response_model= PostResponse, status_code = status.HTTP_201_CREATED)
-def create_post(post:PostCreate):
-    new_id = max(p['id'] for p in posts) + 1 if posts else 1
-    new_post = {
-        "id":new_id,
-        "author":post.author,
-        "title":post.title,
-        "content":post.content,
-        "date_posted":"April 30, 2025"
-    }
-    posts.append(new_post)
-    return new_post
-
-@app.get('/api/posts/{post_id}',response_model=PostResponse)
-def get_post(p_id:int, db:Annotated[Session, Depends(get_db)]):
-    res = db.execute(select(models.Post).where(models.Post.id==p_id))
-    post = res.scalars().first()
-    if post:
-        return post
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Post not found"
-    )
-
-@app.exception_handler(StHTTPExcep)
-def general_http_excep_handler(request:Request, exception: StHTTPExcep):
-    message=(
-        exception.detail if exception.detail else 'An Error Occured. Check your request.'
-    )
-    return JSONResponse(
-        status_code = exception.status_code,
-        content={'detail':message}
-    )
-
-@app.exception_handler(RequestValidationError)
-def validation_excep_handler(request:Request, exception:RequestValidationError):
-    return JSONResponse(
-        status_code=status.HTTP_402_UNPROCESSABLE_CONTENT,
-        content={'detail':exception.errors()}
-    )
+@app.get('/posts')
+def home(request:Request):
+    return temps_.TemplateResponse(request, 'allposts.html', {"posts":posts})
 
