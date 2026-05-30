@@ -1,9 +1,6 @@
 {%extends 'parent.html'%}
 {%block content%}
     <a href="{{url_for('home')}}">Home</a>
-    {% for p in posts %}
         <h2>{{p.title}}</h2>
         <p>{{p.content}}</p>
-        <a href="/posts/{{p.id}}">Open</a>
-    {% endfor %}
 {%endblock content%}
