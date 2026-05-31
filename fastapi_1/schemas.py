@@ -24,6 +24,10 @@ class PostCreate(PostBase):
     # pass
     user_id:int
 
+class PostUpdate(BaseModel):
+    title:str|None = Field(default=None, min_length=1, max_length=100)
+    content:str|None = Field(default=None, min_length=1)
+
 class PostResponse(PostBase):
     model_config = ConfigDict(from_attibutes=True)
     id:int
