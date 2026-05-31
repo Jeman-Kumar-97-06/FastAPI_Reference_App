@@ -5,14 +5,17 @@ from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as sHTTPExcep
 from fastapi.exceptions import RequestValidationError
 from typing import Annotated
-from sqlalchemy import Select
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from database import Base, engine, get_db
 from schemas import PostCreate, PostResponse, UserCreate, UserResponse
 import models
 
 Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name='static')
+app.mount("/media", StaticFiles(directory="media"), name="media")
 
 temps_ = Jinja2Templates(directory='templates')
 
@@ -47,6 +50,29 @@ def create_post(post:PostCreate):
     }
     posts.append(new_post)
     return new_post
+
+@app.post("/api/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_user(user:UserCreate, db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.User).where(models.User.username==user.username))
+    existing_user = result.scalars().first()
+    if existing_user:
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail='Username already exists'
+        )
+    result = db.execute(select(models.User).where(models.User.email==user.email))
+    existing_email = result.scalars().first()
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
+        )
+    new_user = models.User(
+        username = user.username,
+        email    = user.email
+    )
+    db.add(new_user) 
+    db.commit()
+    db.refresh(new_user)
 
 
 # -----------------------------------------------------------------------------------------------
