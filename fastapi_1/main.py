@@ -8,7 +8,7 @@ from fastapi.templating         import Jinja2Templates
 from sqlalchemy                 import select
 from sqlalchemy.ext.asyncio     import AsyncSession
 from sqlalchemy.orm             import selectinload
-from starlette.exceptions       import HTTPException as StartletteException
+from starlette.exceptions       import HTTPException as StarletteException
 from database                   import Base, engine, get_db
 from routers                    import posts, users
 
@@ -43,14 +43,14 @@ def home(request:Request):
     return temps_.TemplateResponse(request, 'home.html',{"title":"Home Page"})
 
 @app.get('/posts')
-def get_posts_api(request:Request, db:Annotated[Session, Depends(get_db)]):
-    results = db.execute(select(models.Post))
+async def get_posts_api(request:Request, db:Annotated[AsyncSession, Depends(get_db)]):
+    results = await db.execute(select(models.Post))
     posts   = results.scalars().all()
     return temps_.TemplateResponse(request, 'allposts.html', {"posts":posts, "title":"All Posts"})
 
 @app.get('/posts/{post_id}')
-def get_post_api(request:Request, post_id:int, db:Annotated[Session, Depends(get_db)]):
-    results = db.execute(select(models.Post).where(models.Post.id==post_id))
+async def get_post_api(request:Request, post_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
+    results = await db.execute(select(models.Post).where(models.Post.id==post_id))
     post    = results.scalars().first()
     if post:
         title = post.title[:50]
@@ -58,55 +58,58 @@ def get_post_api(request:Request, post_id:int, db:Annotated[Session, Depends(get
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
 @app.get('/users/{user_id}/posts',include_in_schema=False)
-def user_posts_page(request:Request, user_id:int, db:Annotated[Session, Depends(get_db)]):
-    results = db.execute(select(models.User).where(models.User.id==user_id))
+async def user_posts_page(request:Request, user_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
+    results = await db.execute(select(models.User).where(models.User.id==user_id))
     user    = results.scalars().first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    results = db.execute(select(models.Post).where(models.Post.user_id==user_id))
+    results = await db.execute(select(models.Post).where(models.Post.user_id==user_id))
     posts   = results.scalars().all()
     return temps_.TemplateResponse(request, "user_posts.html",{"posts":posts, "user":user, "title":f"{user.username}'s Posts"}
     )
 
 #-------------------------------------------------------------------------------------------------
-@app.exception_handler(sHTTPExcep)
-def general_http_excep_handler(request:Request, exception:sHTTPExcep):
-    message= (
+@app.exception_handler(StarletteException)
+async def general_http_exception_handler(
+    request: Request,
+    exception: StarletteException,
+):
+    if request.url.path.startswith("/api"):
+        return await http_exception_handler(request, exception)
+
+    message = (
         exception.detail
         if exception.detail
-        else 'An Error Occured. Check ur request!'
+        else "An error occurred. Please check your request and try again."
     )
-    if request.url.path.startswith('/api'):
-        return JSONResponse(
-            status_code = exception.status_code,
-            content={'detail':message}
-        )
+
     return temps_.TemplateResponse(
         request,
-        '404.html',
+        "error.html",
         {
-            "status_code":exception.status_code,
-            "title":exception.status_code,
-            "message":message
+            "status_code": exception.status_code,
+            "title": exception.status_code,
+            "message": message,
         },
-        status_code=exception.status_code
+        status_code=exception.status_code,
     )
 
 
 @app.exception_handler(RequestValidationError)
-def validation_excep_handler(request:Request, exception:RequestValidationError):
-    if request.url.path.startswith('/api'):
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            content={"detail":exception.errors()}
-        )
+async def validation_exception_handler(
+    request: Request,
+    exception: RequestValidationError,
+):
+    if request.url.path.startswith("/api"):
+        return await request_validation_exception_handler(request, exception)
+
     return temps_.TemplateResponse(
         request,
-        "404.html",
+        "error.html",
         {
-            "status_code":status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "title":status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "message":"Invalid Request, Check Input"
+            "status_code": status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "title": status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "message": "Invalid request. Please check your input and try again.",
         },
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     )
