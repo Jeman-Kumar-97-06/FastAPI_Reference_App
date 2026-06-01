@@ -1,0 +1,76 @@
+@app.get('/api/posts', response_model=list[PostResponse])
+def get_posts(db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.Post))
+    posts  = result.scalars().all()
+    return posts
+
+@app.get('/api/posts/{post_id}', response_model=PostResponse)
+def get_post(post_id:int, db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.Post).where(models.Post.id==post_id))
+    post   = result.scalars().first()
+    if post:
+        return post
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+@app.post('/api/posts',response_model=PostResponse, status_code=status.HTTP_201_CREATED)
+def create_post(post:PostCreate, db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.User).where(models.User.id==post.user_id))
+    user   = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code = status.HTTP_404_NOT_FOUND,
+            detail      = "User not found"
+        )
+    #--------------------Create a New ID for the new post--------
+    # new_id = max(p["id"] for p in posts)+1 if posts else 1 --> ID is created automatically
+    new_post = models.Post(
+        title = post.title,
+        content = post.content,
+        user_id = post.user_id
+    )
+    #--------------------Add to the existing posts --------------
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    return new_post
+
+#--------------------Full PUT update------------------------
+@app.put('/api/posts/{post_id}', response_model=PostResponse)
+def update_post_full(post_id:int, post_data:PostCreate, db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.Post).where(models.Post.id==post_id))
+    post   = result.scalars().first()
+    if not post:
+        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail="Post not found")
+    if post_data.user_id!=post.user_id:
+        result = db.execute(select(models.User).where(models.User.id==post_data.user_id))
+        user   = result.scalars().first()
+        if not user:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail      = "User not found"
+            )
+    post.tile    = post_data.title
+    post.content = post_data.content
+    post.user_id = post_data.user_id
+    db.commit()
+    db.refresh(post)
+    return post
+
+#--------------------Partial PATCH Update---------------
+@app.patch('/api/posts/{post_id}',response_model=PostResponse)
+def update_post_partial(post_id:int, post_data:PostUpdate, db:Annotated[Session, Depends(get_db)]):
+    result = db.execute(select(models.Post).where(models.Post.id==post_id))
+    post   = result.scalars().first()
+    if not post:
+        raise HTTPException(status_code = status.HTTP_404_NOT_FOUND, detail='Post not found')
+    update_data = post_data.model_dump(exclude_unset=True)
+    for f,v in update_data.item():
+        setattr(post, f, v)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+
+
+
