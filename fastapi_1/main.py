@@ -44,7 +44,7 @@ def home(request:Request):
 
 @app.get('/posts')
 async def get_posts_api(request:Request, db:Annotated[AsyncSession, Depends(get_db)]):
-    results = await db.execute(select(models.Post))
+    results = await db.execute(select(models.Post).options(selectinload(models.Post.author)))
     posts   = results.scalars().all()
     return temps_.TemplateResponse(request, 'allposts.html', {"posts":posts, "title":"All Posts"})
 
