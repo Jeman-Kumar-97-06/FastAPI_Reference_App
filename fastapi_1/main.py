@@ -87,6 +87,9 @@ async def user_posts_page(request: Request, user_id: int, db: Annotated[AsyncSes
     )
 
 
+#--------------------------------------------------------------------
+#------------------ Exception Handling ------------------------------
+
 @app.exception_handler(StarletteHTTPException)
 async def general_http_exception_handler(
     request: Request,
