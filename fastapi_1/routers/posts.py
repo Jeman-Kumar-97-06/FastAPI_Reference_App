@@ -30,9 +30,10 @@ async def create_post(post:PostCreate, db:Annotated[AsyncSession, Depends(get_db
         user_id = post.user_id
     )
 
-    await db.add(new_post)
+    db.add(new_post)
     await db.commit()
     await db.refresh(new_post, attribute_names=['author'])
+    print(new_post)
     return new_post
 
 @router.get("/{post_id}", response_model=PostResponse)

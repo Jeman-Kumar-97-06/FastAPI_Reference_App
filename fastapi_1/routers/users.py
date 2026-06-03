@@ -23,7 +23,7 @@ async def create_user(user:UserCreate, db:Annotated[AsyncSession, Depends(get_db
 
     #-----------------------------------Existing Email?----------------------------
     result = await db.execute(select(models.User).where(models.User.email == user.email))
-    existing_email = result.scalars().email()
+    existing_email = result.scalars().first()
     if existing_email:
         raise HTTPException(
             status_code = status.HTTP_400_BAD_REQUEST,
