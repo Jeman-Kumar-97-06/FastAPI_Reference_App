@@ -18,7 +18,7 @@ async def get_posts(db:Annotated[AsyncSession, Depends(get_db)]):
 @router.post("",response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 async def create_post(post:PostCreate, db:Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(select(models.User).where(models.User.id == post.user_id))
-    user   = result.scalrs().first()
+    user   = result.scalars().first()
     if not user:
         raise HTTPException(
             status_code = status.HTTP_404_NOT_FOUND,
