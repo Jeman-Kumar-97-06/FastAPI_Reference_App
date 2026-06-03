@@ -40,5 +40,5 @@ class PostResponse(PostBase):
     user_id:int
     author:UserResponse
     # --------------------------------
-    data_posted:str
+    data_posted:datetime
 
