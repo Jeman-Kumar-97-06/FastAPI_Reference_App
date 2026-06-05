@@ -9,6 +9,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password:str = Field(min_length=8)
 
+#You can't show email to Public
 class UserPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id:int
@@ -16,6 +17,7 @@ class UserPublic(BaseModel):
     image_file:str|None
     image_path:str
 
+#You can show email in Private
 class UserPrivate(UserPublic):
     email: EmailStr
 
