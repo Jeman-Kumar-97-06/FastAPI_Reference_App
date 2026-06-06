@@ -43,7 +43,6 @@ async def create_user(user:UserCreate, db:Annotated[AsyncSession, Depends(get_db
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
-    print(new_user)
     return new_user
 
 @router.post("/token", response_model=Token)
