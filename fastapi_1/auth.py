@@ -1,24 +1,23 @@
-from datetime import UTC, datetime, timedelta
-
-import jwt
+from datetime         import UTC, datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
-from pwdlib import PasswordHash
+from pwdlib           import PasswordHash
+from config           import settings
+import jwt
 
-from config import settings
 
 password_hash = PasswordHash.recommended()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/users/token")
 
-
+#Hashes the Password sent by the user:
 def hash_password(password: str) -> str:
     return password_hash.hash(password)
 
-
+#Verifies whether the hashed password is equal to plain text password:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_hash.verify(plain_password, hashed_password)
 
-
+#Create JWT Token:
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Create a JWT access token."""
     to_encode = data.copy()
@@ -36,7 +35,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     )
     return encoded_jwt
 
-
+#Verify the JWT access token and return the user_id if valid:
 def verify_access_token(token: str) -> str | None:
     """Verify a JWT access token and return the subject (user id) if valid."""
     try:
